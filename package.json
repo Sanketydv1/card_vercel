@@ -13,7 +13,7 @@
     "dotenv": "^17.2.3",
     "jszip": "^3.10.1",
     "lucide-react": "^0.562.0",
-    "next": "^15.1.6",
+    "next": "latest",
     "nodemailer": "^7.0.12",
     "pdf-lib": "^1.17.1",
     "react": "19.2.3",
@@ -24,7 +24,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
-    "eslint-config-next": "^15.1.6",
+    "eslint-config-next": "latest",
     "tailwindcss": "^4"
   }
 }
