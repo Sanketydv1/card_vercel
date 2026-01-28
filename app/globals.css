@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --main-gradient: linear-gradient(to right, #163285, #3857b1, #7ea1ee);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --main-gradient: linear-gradient(to right, #3857b1, #3857b1, #7ea1ee);
+  }
+}
+
+body {
+  /* Use the gradient as the default background and fall back to the solid color */
+  background: var(--main-gradient), var(--background);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+}
+
+.button-gradient {
+  background: var(--main-gradient);
+  color: white;
+}
+.button-gradient-reverse {
+  background: linear-gradient(to left, #163285, #3857b1, #7ea1ee);
+  color: white;
+}
+
+/* Hide native scrollbars but keep scrolling functional */
+.hide-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
