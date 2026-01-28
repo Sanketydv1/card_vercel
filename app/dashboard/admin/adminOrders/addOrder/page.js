@@ -1,12 +1,12 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import toast from "react-hot-toast";
 import axios from "@/lib/axiosConfig";
 import { useRouter, useSearchParams } from "next/navigation";
 import { validateOrder, validateOrderField } from "@/lib/validation";
 import { getImageUrl } from '@/lib/imageUrl';
 
-export default function AddOrderForm({ onSuccess, onCancel }) {
+function AddOrderFormContent({ onSuccess, onCancel }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const repeatId = searchParams.get('repeat');
@@ -378,5 +378,13 @@ export default function AddOrderForm({ onSuccess, onCancel }) {
                 </div>
             </form>
         </div>
+    );
+}
+
+export default function AddOrderForm(props) {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AddOrderFormContent {...props} />
+        </Suspense>
     );
 }

@@ -21,10 +21,6 @@ export const filterOrders = (orders, searchTerm) => {
 export default function Search({ value = "", onChange = null, placeholder = "Search", className = "pl-8 pr-3 py-1.5 rounded-lg text-sm outline-none" }) {
     const [local, setLocal] = useState(value || "");
 
-    useEffect(() => {
-        setLocal(value || "");
-    }, [value]);
-
     const handle = (e) => {
         const v = e.target.value;
         setLocal(v);

@@ -1,12 +1,12 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import axios from "../../../../../lib/axiosConfig";
 import { validateOrder, validateOrderField } from "../../../../../lib/validation";
 import { getImageUrl } from '../../../../../lib/imageUrl';
 
-export default function AddOrderPage() {
+function AddOrderPageContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const repeatId = searchParams.get('repeat');
@@ -496,5 +496,13 @@ export default function AddOrderPage() {
                 </form>
             </div>
         </div>
+    );
+}
+
+export default function AddOrderPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <AddOrderPageContent />
+        </Suspense>
     );
 }

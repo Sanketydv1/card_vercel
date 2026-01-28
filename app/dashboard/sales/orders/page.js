@@ -27,25 +27,33 @@ export default function OrderListPage() {
     const [showRepeatModal, setShowRepeatModal] = useState(false);
     const [repeatOrderId, setRepeatOrderId] = useState(null);
 
+    useEffect(() => {
+        if (showModal) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [showModal]);
+
     const openCardPreview = (order) => {
         setModalOrder(order);
         setModalMode('card');
         setShowModal(true);
-        document.body.style.overflow = 'hidden';
     };
 
     const openFullPreview = (order) => {
         setModalOrder(order);
         setModalMode('full');
         setShowModal(true);
-        document.body.style.overflow = 'hidden';
     };
 
     const closeModal = () => {
         setShowModal(false);
         setModalOrder(null);
         setModalMode('card');
-        document.body.style.overflow = '';
     };
 
     const handleRepeat = (id) => {
@@ -63,15 +71,19 @@ export default function OrderListPage() {
 
     useEffect(() => {
         let mounted = true;
-        setLoading(true);
         axios
             .get("/api/sales")
             .then((res) => {
                 if (!mounted) return;
+                setLoading(false);
                 setOrders(res.data?.data || []);
             })
-            .catch((err) => setError(err?.message || "Failed to load"))
-            .finally(() => setLoading(false));
+            .catch((err) => {
+                if (mounted) {
+                    setError(err?.message || "Failed to load");
+                    setLoading(false);
+                }
+            });
 
         return () => (mounted = false);
     }, []);
