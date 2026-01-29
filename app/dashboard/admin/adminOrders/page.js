@@ -294,7 +294,7 @@ ${modalOrder.designName?.toUpperCase()} ADDRESS
 COURIER: ${modalOrder.modeOfCourier?.toUpperCase()}
 
 TO:
-${modalOrder.mobile}
++91 ${modalOrder.mobile}
 ${modalOrder.to?.toUpperCase()}
 ${modalOrder.pinCode}
 
