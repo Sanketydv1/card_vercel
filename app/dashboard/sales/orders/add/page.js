@@ -20,6 +20,7 @@ function AddOrderPageContent() {
     const [cardPhotoPreview, setCardPhotoPreview] = useState(null);
 
     const [cardType, setCardType] = useState("PVC");
+    const [customCardType, setCustomCardType] = useState("");
     const [finishing, setFinishing] = useState("Matte");
     const [quantity, setQuantity] = useState(100);
     const [modeOfCourier, setModeOfCourier] = useState("BY Air");
@@ -45,6 +46,7 @@ function AddOrderPageContent() {
                     setDesignName(order.designName || "");
                     setDataType(order.dataType || "Variable");
                     setCardType(order.cardType || "PVC");
+                    setCustomCardType(order.customCardType || "");
                     setFinishing(order.finishing || "Matte");
                     setQuantity(order.quantity || 100);
                     setModeOfCourier(order.modeOfCourier || "BY Air");
@@ -118,8 +120,14 @@ function AddOrderPageContent() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const order = { designName, dataType, excelFiles, zipFile, cardPhoto, cardType, finishing, quantity, modeOfCourier, fromOption, to, pinCode, mobile };
+        const order = { designName, dataType, excelFiles, zipFile, cardPhoto, cardType, customCardType, finishing, quantity, modeOfCourier, fromOption, to, pinCode, mobile };
         const validationErrors = validateOrder(order);
+
+        // Additional check for customCardType
+        if (cardType === "Others") {
+            const customError = validateOrderField("customCardType", customCardType, cardType);
+            if (customError) validationErrors.customCardType = customError;
+        }
 
         if (Object.keys(validationErrors).length) {
             setErrors(validationErrors);
@@ -147,6 +155,7 @@ function AddOrderPageContent() {
                 designName,
                 dataType,
                 cardType,
+                customCardType: cardType === "Others" ? customCardType : undefined,
                 finishing,
                 quantity,
                 modeOfCourier,
@@ -252,7 +261,7 @@ function AddOrderPageContent() {
                                     {/* Excel Upload */}
                                     <div className="border rounded-lg p-4 bg-white shadow-sm">
                                         <label className="text-sm font-semibold text-gray-700">
-                                            Upload Excel Files <span className="text-red-600">*</span>
+                                            Upload Excel Files
                                         </label>
 
                                         <input
@@ -389,10 +398,10 @@ function AddOrderPageContent() {
 
                     <hr />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <div>
                             <label className="text-sm font-medium">Card Type <span className="text-red-600">*</span></label>
-                            <select value={cardType} onChange={(e) => setCardType(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
+                            <select value={cardType} onChange={(e) => { setCardType(e.target.value); if (e.target.value !== "Others") setCustomCardType(""); }} className="w-full mt-1 px-3 py-2 border rounded">
                                 <option value="PVC">PVC</option>
                                 <option value="Maifair1k">Maifair 1K</option>
                                 <option value="Proximity">Proximity</option>
@@ -400,9 +409,26 @@ function AddOrderPageContent() {
                                 <option value="NFC213">NFC 213</option>
                                 <option value="NFC216">NFC 216</option>
                                 <option value="Maifair4k">Maifair 4K</option>
-                                <option value="Others">Other</option>
+                                <option value="Others">Others</option>
                             </select>
                         </div>
+
+                        {cardType === "Others" && (
+                            <div>
+                                <input
+                                    type="text"
+                                    value={customCardType}
+                                    onChange={(e) => setCustomCardType(e.target.value)}
+                                    onBlur={(e) => setErrors(prev => ({ ...prev, customCardType: validateOrderField('customCardType', e.target.value, cardType) }))}
+                                    placeholder="Enter custom card type"
+                                    className={`w-full mt-1 px-3 py-2 border rounded ${errors.customCardType ? 'border-red-500' : ''}`}
+                                    onInput={(e) => {
+                                        e.target.value = e.target.value.replace(/^\s+/, "");
+                                    }}
+                                />
+                                {errors.customCardType && <div className="text-sm text-red-600 mt-1">{errors.customCardType}</div>}
+                            </div>
+                        )}
 
                         <div>
                             <label className="text-sm font-medium">Finishing <span className="text-red-600">*</span></label>
@@ -413,19 +439,39 @@ function AddOrderPageContent() {
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium">Quantity <span className="text-red-600">*</span></label>
-                            <input type="number" min="0" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} onBlur={(e) => setErrors(prev => ({ ...prev, quantity: validateOrderField('quantity', e.target.value) }))} className={`w-full mt-1 px-2 py-[6px] border rounded ${errors.quantity ? 'border-red-500' : ''}`} />
-                            {errors.quantity && <div className="text-sm text-red-600 mt-1">{errors.quantity}</div>}
+                            <label className="text-sm font-medium">
+                                Quantity <span className="text-red-600">*</span>
+                            </label>
+
+                            <input
+                                type="text"
+                                value={quantity}
+                                onChange={(e) => {
+                                    let v = e.target.value.replace(/\D/g, ""); // only digits
+                                    if (v.length > 1 && v.startsWith("0")) v = v.slice(1); // no 0123
+                                    setQuantity(v);
+                                }}
+                                onBlur={(e) =>
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        quantity: validateOrderField("quantity", e.target.value),
+                                    }))
+                                }
+                                className={`w-full mt-1 px-2 py-[6px] border rounded ${errors.quantity ? "border-red-500" : ""
+                                    }`}
+                            />
+
+                            {errors.quantity && (
+                                <div className="text-sm text-red-600 mt-1">{errors.quantity}</div>
+                            )}
                         </div>
-
-
 
                         <div>
                             <label className="text-sm font-medium">Mode of Courier <span className="text-red-600">*</span></label>
                             <select value={modeOfCourier} onChange={(e) => setModeOfCourier(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
                                 <option value="Urgent">Urgent</option>
-                                <option value="BY Air">BY Air</option>
-                                <option value="BY Road">BY Road</option>
+                                <option value="BY Air">By Air</option>
+                                <option value="BY Road">By Road</option>
                                 <option value="By Train">By Train</option>
                             </select>
                         </div>

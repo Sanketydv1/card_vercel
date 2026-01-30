@@ -19,6 +19,7 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
     const [cardPhotoPreview, setCardPhotoPreview] = useState(null);
 
     const [cardType, setCardType] = useState("PVC");
+    const [customCardType, setCustomCardType] = useState("");
     const [finishing, setFinishing] = useState("Matte");
     const [quantity, setQuantity] = useState(100);
     const [modeOfCourier, setModeOfCourier] = useState("BY Air");
@@ -44,6 +45,7 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
                     setDesignName(order.designName || "");
                     setDataType(order.dataType || "Variable");
                     setCardType(order.cardType || "PVC");
+                    setCustomCardType(order.customCardType || "");
                     setFinishing(order.finishing || "Matte");
                     setQuantity(order.quantity || 100);
                     setModeOfCourier(order.modeOfCourier || "By Air");
@@ -117,8 +119,14 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const order = { designName, dataType, excelFiles, zipFile, cardPhoto, cardType, finishing, quantity, modeOfCourier, fromOption, to, pinCode, mobile };
+        const order = { designName, dataType, excelFiles, zipFile, cardPhoto, cardType, customCardType, finishing, quantity, modeOfCourier, fromOption, to, pinCode, mobile };
         const validationErrors = validateOrder(order);
+
+        // Additional check for customCardType
+        if (cardType === "Others") {
+            const customError = validateOrderField("customCardType", customCardType, cardType);
+            if (customError) validationErrors.customCardType = customError;
+        }
 
         if (Object.keys(validationErrors).length) {
             setErrors(validationErrors);
@@ -150,6 +158,7 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
                 designName,
                 dataType,
                 cardType,
+                customCardType: cardType === "Others" ? customCardType : undefined,
                 finishing,
                 quantity,
                 modeOfCourier,
@@ -235,7 +244,7 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="border rounded-lg p-4 bg-white shadow-sm">
-                                    <label className="text-sm font-semibold text-gray-700">Upload Excel Files <span className="text-red-600">*</span></label>
+                                    <label className="text-sm font-semibold text-gray-700">Upload Excel Files</label>
                                     <input type="file" multiple accept=".xlsx,.xls,.csv" onChange={handleExcelChange} className="mt-2 block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer" />
 
                                     <div className="mt-3 space-y-2">
@@ -273,10 +282,10 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
 
                 <hr />
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                     <div>
                         <label className="text-sm font-medium">Card Type <span className="text-red-600">*</span></label>
-                        <select value={cardType} onChange={(e) => setCardType(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
+                        <select value={cardType} onChange={(e) => { setCardType(e.target.value); if (e.target.value !== "Others") setCustomCardType(""); }} className="w-full mt-1 px-3 py-2 border rounded">
                             <option value="PVC">PVC</option>
                             <option value="Maifair1k">Maifair 1K</option>
                             <option value="Proximity">Proximity</option>
@@ -284,9 +293,26 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
                             <option value="NFC213">NFC 213</option>
                             <option value="NFC216">NFC 216</option>
                             <option value="Maifair4k">Maifair 4K</option>
-                            <option value="Others">Other</option>
+                            <option value="Others">Others</option>
                         </select>
                     </div>
+
+                    {cardType === "Others" && (
+                        <div>
+                            <input
+                                type="text"
+                                value={customCardType}
+                                onChange={(e) => setCustomCardType(e.target.value)}
+                                onBlur={(e) => setErrors(prev => ({ ...prev, customCardType: validateOrderField('customCardType', e.target.value, cardType) }))}
+                                placeholder="Enter custom card type"
+                                className={`w-full mt-1 px-3 py-2 border rounded ${errors.customCardType ? 'border-red-500' : ''}`}
+                                onInput={(e) => {
+                                    e.target.value = e.target.value.replace(/^\s+/, "");
+                                }}
+                            />
+                            {errors.customCardType && <div className="text-sm text-red-600 mt-1">{errors.customCardType}</div>}
+                        </div>
+                    )}
 
                     <div>
                         <label className="text-sm font-medium">Finishing <span className="text-red-600">*</span></label>
@@ -297,18 +323,50 @@ function AddOrderFormContent({ onSuccess, onCancel }) {
                     </div>
 
                     <div>
-                        <label className="text-sm font-medium">Quantity <span className="text-red-600">*</span></label>
-                        <input type="number" min="0" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} onBlur={(e) => setErrors(prev => ({ ...prev, quantity: validateOrderField('quantity', e.target.value) }))} className={`w-full mt-1 px-2 py-[6px] border rounded ${errors.quantity ? 'border-red-500' : ''}`} />
-                        {errors.quantity && <div className="text-sm text-red-600 mt-1">{errors.quantity}</div>}
+                        <label className="text-sm font-medium">
+                            Quantity <span className="text-red-600">*</span>
+                        </label>
+
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            value={quantity}
+                            onChange={(e) => {
+                                let val = e.target.value;
+
+                                // sirf digits allow
+                                if (!/^\d*$/.test(val)) return;
+
+                                // leading zero remove karo (0123 → 123)
+                                if (val.length > 1 && val.startsWith("0")) {
+                                    val = val.replace(/^0+/, "");
+                                }
+
+                                setQuantity(val);
+                            }}
+                            onBlur={(e) =>
+                                setErrors((prev) => ({
+                                    ...prev,
+                                    quantity: validateOrderField("quantity", e.target.value),
+                                }))
+                            }
+                            className={`w-full mt-1 px-2 py-[6px] border rounded ${errors.quantity ? "border-red-500" : ""
+                                }`}
+                        />
+
+                        {errors.quantity && (
+                            <div className="text-sm text-red-600 mt-1">{errors.quantity}</div>
+                        )}
                     </div>
+
 
 
                     <div>
                         <label className="text-sm font-medium">Mode of Courier <span className="text-red-600">*</span></label>
                         <select value={modeOfCourier} onChange={(e) => setModeOfCourier(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
                             <option value="Urgent">Urgent</option>
-                            <option value="BY Air">BY Air</option>
-                            <option value="BY Road">BY Road</option>
+                            <option value="BY Air">By Air</option>
+                            <option value="BY Road">By Road</option>
                             <option value="By Train">By Train</option>
                         </select>
                     </div>

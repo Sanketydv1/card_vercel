@@ -109,13 +109,25 @@ export default function AddPricingPage({ params }) {
                     <input
                         name="quantityFrom"
                         value={form.quantityFrom}
-                        onChange={handleChange}
-                        onBlur={(e) => setErrors(prev => ({ ...prev, quantityFrom: validatePricing({ quantityFrom: e.target.value }).quantityFrom }))}
-                        className={`block w-full border rounded p-2 ${errors.quantityFrom ? 'border-red-500' : ''}`}
-                        onInput={(e) => (e.target.value = e.target.value.replace(/^\s+/, ""))}
+                        onChange={(e) => {
+                            let v = e.target.value.replace(/\D/g, ""); // only numbers
+                            if (v.length > 1 && v.startsWith("0")) v = v.slice(1); // no 0123
+                            setForm(prev => ({ ...prev, quantityFrom: v }));
+                        }}
+                        onBlur={(e) =>
+                            setErrors(prev => ({
+                                ...prev,
+                                quantityFrom: validatePricing({ quantityFrom: e.target.value }).quantityFrom
+                            }))
+                        }
+                        className={`block w-full border rounded p-2 ${errors.quantityFrom ? "border-red-500" : ""
+                            }`}
                     />
-                    {errors.quantityFrom && <div className="text-sm text-red-600 mt-1">{errors.quantityFrom}</div>}
+                    {errors.quantityFrom && (
+                        <div className="text-sm text-red-600 mt-1">{errors.quantityFrom}</div>
+                    )}
                 </div>
+
 
                 {/* Quantity To */}
                 <div>
@@ -123,13 +135,25 @@ export default function AddPricingPage({ params }) {
                     <input
                         name="quantityTo"
                         value={form.quantityTo}
-                        onChange={handleChange}
-                        onBlur={(e) => setErrors(prev => ({ ...prev, quantityTo: validatePricing({ quantityTo: e.target.value }).quantityTo }))}
-                        className={`block w-full border rounded p-2 ${errors.quantityTo ? 'border-red-500' : ''}`}
-                        onInput={(e) => (e.target.value = e.target.value.replace(/^\s+/, ""))}
+                        onChange={(e) => {
+                            let v = e.target.value.replace(/\D/g, ""); // only digits
+                            if (v.length > 1 && v.startsWith("0")) v = v.slice(1); // no 0123
+                            setForm(prev => ({ ...prev, quantityTo: v }));
+                        }}
+                        onBlur={(e) =>
+                            setErrors(prev => ({
+                                ...prev,
+                                quantityTo: validatePricing({ quantityTo: e.target.value }).quantityTo
+                            }))
+                        }
+                        className={`block w-full border rounded p-2 ${errors.quantityTo ? "border-red-500" : ""
+                            }`}
                     />
-                    {errors.quantityTo && <div className="text-sm text-red-600 mt-1">{errors.quantityTo}</div>}
+                    {errors.quantityTo && (
+                        <div className="text-sm text-red-600 mt-1">{errors.quantityTo}</div>
+                    )}
                 </div>
+
 
                 {/* Price */}
                 <div>
@@ -137,13 +161,25 @@ export default function AddPricingPage({ params }) {
                     <input
                         name="price"
                         value={form.price}
-                        onChange={handleChange}
-                        onBlur={(e) => setErrors(prev => ({ ...prev, price: validatePricing({ price: e.target.value }).price }))}
-                        className={`block w-full border rounded p-2 ${errors.price ? 'border-red-500' : ''}`}
-                        onInput={(e) => (e.target.value = e.target.value.replace(/^\s+/, ""))}
+                        onChange={(e) => {
+                            let v = e.target.value.replace(/\D/g, ""); // only digits
+                            if (v.length > 1 && v.startsWith("0")) v = v.slice(1); // no 0123
+                            setForm(prev => ({ ...prev, price: v }));
+                        }}
+                        onBlur={(e) =>
+                            setErrors(prev => ({
+                                ...prev,
+                                price: validatePricing({ price: e.target.value }).price
+                            }))
+                        }
+                        className={`block w-full border rounded p-2 ${errors.price ? "border-red-500" : ""
+                            }`}
                     />
-                    {errors.price && <div className="text-sm text-red-600 mt-1">{errors.price}</div>}
+                    {errors.price && (
+                        <div className="text-sm text-red-600 mt-1">{errors.price}</div>
+                    )}
                 </div>
+
 
                 {/* Notes */}
                 <div>

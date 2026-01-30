@@ -26,6 +26,7 @@ export default function AdminOrderList() {
     const [selectedPricingId, setSelectedPricingId] = useState("");
     const [inputPrice, setInputPrice] = useState("");
     const [pricingNote, setPricingNote] = useState("");
+    const [notesInput, setNotesInput] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);  // Add this new state
 
     // pagination & search
@@ -106,6 +107,7 @@ export default function AdminOrderList() {
             setSelectedPricingId("");
             setInputPrice("");
             setPricingNote("");
+            setNotesInput("");
             // fetch pricing for vendor
             const res = await axios.get(`/api/vendor/${vendorId}/pricing`);
             if (res.data.success) {
@@ -130,6 +132,7 @@ export default function AdminOrderList() {
             setSelectedPricingId("");
             setInputPrice("");
             setPricingNote("");
+            setNotesInput("");
             // fetch pricing for vendor
             const res = await axios.get(`/api/vendor/${vendorId}/pricing`);
             if (res.data.success) {
@@ -159,6 +162,7 @@ export default function AdminOrderList() {
         setSelectedPricingId("");
         setInputPrice("");
         setPricingNote("");
+        setNotesInput("");
         setModalOrder(null);
         document.body.style.overflow = '';
     };
@@ -170,6 +174,7 @@ export default function AdminOrderList() {
             setSelectedPricingId("");
             setInputPrice("");
             setPricingNote("");
+            setNotesInput("");
         } else {
             setSelectedPricingId(pricing._id);
             // if pricing has inputPrice field use it otherwise use price
@@ -192,11 +197,12 @@ export default function AdminOrderList() {
                 newStatus = "poPending";
             }
 
-            // update sale with vendor, vendorPricing, inputPrice, and new status
+            // update sale with vendor, vendorPricing, inputPrice, notes, and new status
             await axios.put(`/api/sales/${saleId}`, {
                 vendor: vendorId,
                 vendorPricing: selectedPricingId || null,
                 inputPrice: inputPrice ? Number(inputPrice) : null,
+                notes: notesInput.trim() || undefined,
                 orderStatus: newStatus
             });
             toast.success('Vendor selected successfully');
@@ -341,6 +347,11 @@ export default function AdminOrderList() {
                             <div className="mt-4">
                                 <label className="block text-sm text-gray-700">Input Price</label>
                                 <input value={inputPrice} onChange={(e) => setInputPrice(e.target.value)} className="w-full mt-1 border rounded px-3 py-2" placeholder="Enter price" />
+                            </div>
+
+                            <div className="mt-4">
+                                <label className="block text-sm text-gray-700">Notes (Optional)</label>
+                                <textarea value={notesInput} onChange={(e) => setNotesInput(e.target.value)} className="w-full mt-1 border rounded px-3 py-2 resize-none" placeholder="Add notes for this order" rows={3} />
                             </div>
 
                             {pricingNote ? (

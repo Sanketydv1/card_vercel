@@ -262,7 +262,7 @@ export default function OrderListPage() {
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
                                             <div className="text-sm text-gray-600">Data Type : <span className="font-medium">{modalOrder.dataType === 'variable' ? 'Variable' : 'Fixed'}</span></div>
-                                            <div className="text-sm text-gray-600 mt-2">Card Type : <span className="font-medium capitalize">{modalOrder.cardType}</span></div>
+                                            <div className="text-sm text-gray-600 mt-2">Card Type : <span className="font-medium capitalize">{modalOrder.cardType}{modalOrder.cardType === 'Others' && modalOrder.customCardType ? ` (${modalOrder.customCardType})` : modalOrder.cardType && modalOrder.cardType.toLowerCase() === 'others' && modalOrder.customCardType ? ` (${modalOrder.customCardType})` : ''}</span></div>
                                             <div className="text-sm text-gray-600 mt-2">Finishing : <span className="font-medium capitalize">{modalOrder.finishing}</span></div>
                                             <div className="text-sm text-gray-600 mt-2">Pin Code : <span className="font-medium">{modalOrder.pinCode}</span></div>
                                         </div>

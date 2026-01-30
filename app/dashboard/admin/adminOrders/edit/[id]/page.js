@@ -17,14 +17,15 @@ export default function EditOrderPage() {
     const [errors, setErrors] = useState({});
 
     const [designName, setDesignName] = useState("");
-    const [dataType, setDataType] = useState("variable");
+    const [dataType, setDataType] = useState("Variable");
     const [cardPhotoPreview, setCardPhotoPreview] = useState(null);
-    const [cardPhoto, setCardPhoto] = useState(null); // new file if replaced
-    const [cardType, setCardType] = useState("pvc");
-    const [finishing, setFinishing] = useState("matte");
+    const [cardPhoto, setCardPhoto] = useState(null);
+    const [cardType, setCardType] = useState("PVC");
+    const [customCardType, setCustomCardType] = useState("");
+    const [finishing, setFinishing] = useState("Matte");
     const [quantity, setQuantity] = useState(100);
-    const [modeOfCourier, setModeOfCourier] = useState("byair");
-    const [fromOption, setFromOption] = useState("infosware");
+    const [modeOfCourier, setModeOfCourier] = useState("BY Air");
+    const [fromOption, setFromOption] = useState("INFOSWARE PVT LTD");
     const [to, setTo] = useState("");
     const [pinCode, setPinCode] = useState("");
     const [mobile, setMobile] = useState("");
@@ -48,13 +49,14 @@ export default function EditOrderPage() {
                 if (res.data?.success) {
                     const s = res.data.data;
                     setDesignName(s.designName || "");
-                    setDataType(s.dataType || "variable");
+                    setDataType(s.dataType || "Variable");
                     setCardPhotoPreview(s.cardPhoto || null);
-                    setCardType(s.cardType || "pvc");
-                    setFinishing(s.finishing || "matte");
+                    setCardType(s.cardType || "PVC");
+                    setCustomCardType(s.customCardType || "");
+                    setFinishing(s.finishing || "Matte");
                     setQuantity(s.quantity || 100);
-                    setModeOfCourier(s.modeOfCourier || "byair");
-                    setFromOption(s.from || "infosware");
+                    setModeOfCourier(s.modeOfCourier || "BY Air");
+                    setFromOption(s.from || "INFOSWARE PVT LTD");
                     setTo(s.to || "");
                     setPinCode(s.pinCode ? String(s.pinCode) : "");
                     setMobile(s.mobile ? String(s.mobile) : "");
@@ -195,7 +197,13 @@ export default function EditOrderPage() {
         e.preventDefault();
 
         // build order object for client-side validation
-        const order = { designName, dataType, cardPhoto: cardPhoto || cardPhotoPreview, cardType, finishing, quantity, modeOfCourier, fromOption, to, pinCode, mobile };
+        const order = { designName, dataType, cardPhoto: cardPhoto || cardPhotoPreview, cardType, customCardType, finishing, quantity, modeOfCourier, fromOption, to, pinCode, mobile };
+
+        // Additional check for customCardType
+        if (cardType === "pvc" && cardType.toLowerCase().includes("others")) {
+            const customError = validateOrderField("customCardType", customCardType, cardType);
+            if (customError) order.customCardTypeError = customError;
+        }
 
         if (dataType === 'variable') {
             // excel files: prefer newly selected, otherwise existing excels
@@ -208,6 +216,7 @@ export default function EditOrderPage() {
         }
 
         const validationErrors = validateOrder(order);
+        if (order.customCardTypeError) validationErrors.customCardType = order.customCardTypeError;
         if (Object.keys(validationErrors).length) {
             setErrors(validationErrors);
             toast.error('Please fix validation errors');
@@ -234,6 +243,7 @@ export default function EditOrderPage() {
                 designName,
                 dataType,
                 cardType,
+                customCardType: cardType === "Others" || (typeof cardType === 'string' && cardType.toLowerCase() === "others") ? customCardType : undefined,
                 finishing,
                 quantity,
                 modeOfCourier,
@@ -322,7 +332,7 @@ export default function EditOrderPage() {
                             <select value={dataType} onChange={(e) => {
                                 const v = e.target.value;
                                 setDataType(v);
-                                if (v !== 'variable') {
+                                if (v !== 'Variable') {
                                     setExcelFiles([]);
                                     setZipFile(null);
                                     setUploadExistingExcels([]);
@@ -331,18 +341,18 @@ export default function EditOrderPage() {
                                     setErrors(prev => ({ ...prev, excelFiles: '', zipFile: '' }));
                                 }
                             }} className="w-full mt-1 px-3 py-2 border rounded">
-                                <option value="variable">Variable</option>
-                                <option value="fixed">Fixed</option>
+                                <option value="Variable">Variable</option>
+                                <option value="Fixed">Fixed</option>
                             </select>
                         </div>
 
-                        {dataType === 'variable' && (
+                        {dataType === 'Variable' && (
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     {/* Excel Upload */}
                                     <div className="border rounded-lg p-4 bg-white shadow-sm">
                                         <label className="text-sm font-semibold text-gray-700">
-                                            Upload Excel Files <span className="text-red-600">*</span>
+                                            Upload Excel Files
                                         </label>
 
                                         <input
@@ -460,44 +470,89 @@ export default function EditOrderPage() {
 
                     <hr />
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                         <div>
                             <label className="text-sm font-medium">Card Type <span className="text-red-600">*</span></label>
-                            <select value={cardType} onChange={(e) => setCardType(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
-                                <option value="pvc">PVC</option>
-                                <option value="maifair1k">Maifair 1K</option>
-                                <option value="proximity">Proximity</option>
-                                <option value="uhf">UHF</option>
-                                <option value="nfc213">NFC 213</option>
-                                <option value="nfc216">NFC 216</option>
-                                <option value="maifair4k">Maifair 4K</option>
-                                <option value="others">Other</option>
+                            <select value={cardType} onChange={(e) => { setCardType(e.target.value); if (e.target.value !== "Others") setCustomCardType(""); }} className="w-full mt-1 px-3 py-2 border rounded">
+                                <option value="PVC">PVC</option>
+                                <option value="Maifair1k">Maifair 1K</option>
+                                <option value="Proximity">Proximity</option>
+                                <option value="UHF">UHF</option>
+                                <option value="NFC213">NFC 213</option>
+                                <option value="NFC216">NFC 216</option>
+                                <option value="Maifair4k">Maifair 4K</option>
+                                <option value="Others">Other</option>
                             </select>
                         </div>
+
+                        {cardType === "Others" && (
+                            <div>
+                                <input
+                                    type="text"
+                                    value={customCardType}
+                                    onChange={(e) => setCustomCardType(e.target.value)}
+                                    onBlur={(e) => setErrors(prev => ({ ...prev, customCardType: validateOrderField('customCardType', e.target.value, cardType) }))}
+                                    placeholder="Enter custom card type"
+                                    className={`w-full mt-1 px-3 py-2 border rounded ${errors.customCardType ? 'border-red-500' : ''}`}
+                                    onInput={(e) => {
+                                        e.target.value = e.target.value.replace(/^\s+/, "");
+                                    }}
+                                />
+                                {errors.customCardType && <div className="text-sm text-red-600 mt-1">{errors.customCardType}</div>}
+                            </div>
+                        )}
 
                         <div>
                             <label className="text-sm font-medium">Finishing <span className="text-red-600">*</span></label>
                             <select value={finishing} onChange={(e) => setFinishing(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
-                                <option value="matte">Matte</option>
-                                <option value="gloss">Glossy</option>
+                                <option value="Matte">Matte</option>
+                                <option value="Gloss">Gloss</option>
                             </select>
                         </div>
-
                         <div>
-                            <label className="text-sm font-medium">Quantity <span className="text-red-600">*</span></label>
-                            <input type="number" min="0" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} onBlur={(e) => setErrors(prev => ({ ...prev, quantity: validateOrderField('quantity', e.target.value) }))} className={`w-full mt-1 px-3 py-[6px] border rounded ${errors.quantity ? 'border-red-500' : ''}`} />
-                            {errors.quantity && <div className="text-sm text-red-600 mt-1">{errors.quantity}</div>}
+                            <label className="text-sm font-medium">
+                                Quantity <span className="text-red-600">*</span>
+                            </label>
+
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={quantity}
+                                onChange={(e) => {
+                                    let val = e.target.value;
+
+                                    // sirf digits allow
+                                    if (!/^\d*$/.test(val)) return;
+
+                                    // leading zero remove karo (0123 → 123)
+                                    if (val.length > 1 && val.startsWith("0")) {
+                                        val = val.replace(/^0+/, "");
+                                    }
+
+                                    setQuantity(val);
+                                }}
+                                onBlur={(e) =>
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        quantity: validateOrderField("quantity", e.target.value),
+                                    }))
+                                }
+                                className={`w-full mt-1 px-2 py-[6px] border rounded ${errors.quantity ? "border-red-500" : ""
+                                    }`}
+                            />
+
+                            {errors.quantity && (
+                                <div className="text-sm text-red-600 mt-1">{errors.quantity}</div>
+                            )}
                         </div>
-
-
 
                         <div>
                             <label className="text-sm font-medium">Mode of Courier <span className="text-red-600">*</span></label>
                             <select value={modeOfCourier} onChange={(e) => setModeOfCourier(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
-                                <option value="urgent">Urgent</option>
-                                <option value="byair">By Air</option>
-                                <option value="byroad">By Road</option>
-                                <option value="bytrain">By Train</option>
+                                <option value="Urgent">Urgent</option>
+                                <option value="BY Air">BY Air</option>
+                                <option value="BY Road">BY Road</option>
+                                <option value="By Train">By Train</option>
                             </select>
                         </div>
                     </div>
@@ -505,15 +560,36 @@ export default function EditOrderPage() {
                         <div>
                             <label className="text-sm font-medium">From <span className="text-red-600">*</span></label>
                             <select value={fromOption} onChange={(e) => setFromOption(e.target.value)} className="w-full mt-1 px-3 py-2 border rounded">
-                                <option value="infosware">Infosware Pvt. Ltd</option>
-                                <option value="thinkbotic">Thinkbotic</option>
+                                <option value="INFOSWARE PVT LTD">INFOSWARE PVT LTD</option>
+                                <option value="THINKBOTIC TECHNOLOGY PVT LTD">THINKBOTIC TECHNOLOGY PVT LTD</option>
                             </select>
                         </div>
 
                         <div>
-                            <label className="text-sm font-medium">To <span className="text-red-600">*</span></label>
-                            <input value={to} onChange={(e) => setTo(e.target.value)} onInput={(e) => { e.target.value = e.target.value.replace(/^\s+/, ""); }} onBlur={(e) => setErrors(prev => ({ ...prev, to: validateOrderField('to', e.target.value) }))} className={`w-full mt-1 px-3 py-8 border rounded ${errors.to ? 'border-red-500' : ''}`} />
-                            {errors.to && <div className="text-sm text-red-600 mt-1">{errors.to}</div>}
+                            <label className="text-sm font-medium">
+                                To <span className="text-red-600">*</span>
+                            </label>
+
+                            <textarea
+                                value={to}
+                                onChange={(e) => setTo(e.target.value)}
+                                onBlur={(e) =>
+                                    setErrors((prev) => ({
+                                        ...prev,
+                                        to: validateOrderField("to", e.target.value),
+                                    }))
+                                }
+                                rows={4}
+                                className={`w-full mt-1 px-3 py-2 border rounded resize-none ${errors.to ? "border-red-500" : ""
+                                    }`}
+                                onInput={(e) => {
+                                    e.target.value = e.target.value.replace(/^\s+/, "");
+                                }}
+                            />
+
+                            {errors.to && (
+                                <div className="text-sm text-red-600 mt-1">{errors.to}</div>
+                            )}
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
