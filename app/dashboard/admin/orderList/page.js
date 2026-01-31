@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, Copy, PackageCheck } from 'lucide-react';
+import { Download, Eye, Copy, PackageCheck } from 'lucide-react';
 import Search from '../../components/search';
 import Pagination from '../../components/pagination';
 import axios from "@/lib/axiosConfig";
@@ -185,6 +185,13 @@ export default function AdminOrderList() {
 
     const confirmPricing = async () => {
         if (!modalOrder || isSubmitting) return;  // Early return if already submitting
+
+        // Validation: Either pricing must be selected OR input price must be entered
+        if (!selectedPricingId && !inputPrice.trim()) {
+            toast.error('Please select a pricing option or enter an input price');
+            return;
+        }
+
         const saleId = modalOrder._id;
         const vendorId = modalOrder.vendor;
         setIsSubmitting(true);  // Disable further clicks
@@ -215,6 +222,62 @@ export default function AdminOrderList() {
         }
     };
 
+    const downloadTableData = () => {
+        if (displayedSales.length === 0) {
+            toast.error('No data to download');
+            return;
+        }
+
+        // Prepare CSV header
+        const headers = ['Design Name', 'Card Type', 'Data Type', 'Quantity', 'Price', 'Status'];
+
+        // Prepare CSV rows
+        const rows = displayedSales.map(s => {
+            const price = s.inputPrice != null
+                ? Number(s.inputPrice).toFixed(2)
+                : (s.vendorPricing && typeof s.vendorPricing === 'object' && s.vendorPricing.price != null
+                    ? Number(s.vendorPricing.price).toFixed(2)
+                    : '-');
+
+            return [
+                (s.designName || '').toString().replace(/"/g, '""'),
+                (s.cardType || '-').toString().replace(/"/g, '""'),
+                (s.dataType || '').toString().replace(/"/g, '""'),
+                s.quantity || '',
+                price,
+                (s.uiStatus || s.orderStatus || 'Order Generated').toString().replace(/"/g, '""')
+            ];
+        });
+
+        // Create CSV content with proper formatting
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => {
+                const str = cell.toString();
+                // Quote cells that contain comma, newline, or quotes
+                if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+                    return `"${str}"`;
+                }
+                return str;
+            }).join(','))
+        ].join('\n');
+
+        // Create blob and download
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+
+        link.setAttribute('href', url);
+        link.setAttribute('download', `order_list_page_${currentPage}_${new Date().getTime()}.csv`);
+        link.style.visibility = 'hidden';
+
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast.success('Table data downloaded successfully');
+    };
+
     return (
         <div className="w-full max-w-6xl rounded-xl shadow-xl overflow-hidden">
             <div className="flex justify-between items-center px-6 py-4">
@@ -222,6 +285,9 @@ export default function AdminOrderList() {
                 <div className="flex items-center gap-3">
                     <Search value={searchTerm} onChange={(v) => { setSearchTerm(v); setCurrentPage(1); }} className="pl-8 pr-3 py-1.5 rounded-lg text-sm outline-none" />
                     <button onClick={() => router.push('/dashboard/admin/adminOrders/addOrder')} className="button-gradient-reverse text-white text-sm px-4 py-1.5 rounded-lg">Add Card Order</button>
+                    <button onClick={downloadTableData} className="text-white hover:text-gray-200 transition" title="Download current page data">
+                        <Download size={24} />
+                    </button>
                 </div>
             </div>
 
@@ -231,19 +297,21 @@ export default function AdminOrderList() {
                         <tr>
                             <th className="px-3 py-3 text-center">Design Name</th>
                             <th className="px-3 py-3 text-center">Data type</th>
+                            <th className="px-3 py-3 text-center">Card Type</th>
                             <th className="px-3 py-3 text-center">Card Photo</th>
                             <th className="px-3 py-3 text-center">Full Name</th>
                             <th className="px-3 py-3 text-center">Quantity</th>
+                            <th className="px-3 py-3 text-center">Unit Rate</th>
                             <th className="px-3 py-3 text-center">Status</th>
                             <th className="px-3 py-3 text-center">Select Vendor</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={7} className="text-center">Loading...</td></tr>
+                            <tr><td colSpan={9} className="text-center">Loading...</td></tr>
                         ) : filteredSales.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="text-center p-16">
+                                <td colSpan={9} className="text-center p-16">
                                     <div className="flex flex-col items-center gap-3 text-gray-500">
                                         <PackageCheck size={48} className="text-indigo-500" />
                                         <span className="text-lg font-medium">
@@ -256,6 +324,7 @@ export default function AdminOrderList() {
                             <tr key={s._id} className="border-b hover:bg-gray-50 text-center">
                                 <td className="px-6 py-3">{s.designName}</td>
                                 <td className="capitalize">{s.dataType}</td>
+                                <td className="capitalize">{s.cardType || '-'}</td>
                                 <td>
                                     <button onClick={() => openCardPreview(s)} aria-label="Preview card" className="mx-auto text-indigo-600 hover:scale-110 transition-transform border rounded-md p-[2px]">
                                         <Eye size={18} className="mx-auto cursor-pointer" />
@@ -263,6 +332,13 @@ export default function AdminOrderList() {
                                 </td>
                                 <td>{s.fullName || (s.createdBy ? `${s.createdBy.firstName} ${s.createdBy.lastName}` : (s.mobile ? `Customer (${s.mobile})` : 'System'))}</td>
                                 <td>{s.quantity}</td>
+                                <td>
+                                    {s.inputPrice != null
+                                        ? Number(s.inputPrice).toFixed(2)
+                                        : (s.vendorPricing && typeof s.vendorPricing === 'object' && s.vendorPricing.price != null
+                                            ? Number(s.vendorPricing.price).toFixed(2)
+                                            : '-')}
+                                </td>
                                 <td>
                                     <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
                                         {s.uiStatus || s.orderStatus || 'Order Generated'}
@@ -273,7 +349,7 @@ export default function AdminOrderList() {
                                         value={s.vendor ? s.vendor._id || s.vendor : ""}
                                         onChange={(e) => handleVendorChange(s._id, e.target.value)}
                                         disabled={["ordergenerated", "approvalDone", "cardReady", "cardDispatched", "cardDelivered", "submitted", "recieved"].includes(s.orderStatus)}
-                                        className="px-3 py-1 border rounded bg-white disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                        className="px-1 mr-1 py-1 border rounded bg-white disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
                                     >
                                         <option value="">Select Vendor</option>
                                         {vendors.map(v => <option key={v._id} value={v._id}>{v.vendorName}</option>)}
@@ -362,7 +438,7 @@ export default function AdminOrderList() {
                                 <button onClick={closePricingModal} className="px-4 py-2 rounded border">Cancel</button>
                                 <button
                                     onClick={confirmPricing}
-                                    disabled={isSubmitting}  // Disable if submitting
+                                    disabled={isSubmitting || (!selectedPricingId && !inputPrice.trim())}
                                     className="px-4 py-2 rounded bg-blue-600 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
                                 >
                                     {isSubmitting ? "Submitting..." : "Submit"}

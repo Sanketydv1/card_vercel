@@ -56,6 +56,7 @@ export default function PendingCDRPage() {
     const [modalCdrMode, setModalCdrMode] = useState("preview"); // 'preview' | 'upload' | 'edit'
     const [showUploadArea, setShowUploadArea] = useState(false);
     const [modalGraphic, setModalGraphic] = useState(null); // single graphic doc for the opened sale
+    const [modalDriveLink, setModalDriveLink] = useState('');
 
 
     // Selected files for upload: { file, progress, status, uploadedCdr }
@@ -129,6 +130,7 @@ export default function PendingCDRPage() {
         setHiddenExistingIds([]);
         setUploadCompleted(false);
         setShowUploadArea(mode === 'upload' || mode === 'edit');
+        setModalDriveLink('');
         // set modalGraphic from sale's graphic
         setModalGraphic(sale.graphic || null);
 
@@ -148,8 +150,16 @@ export default function PendingCDRPage() {
         if (!files) return;
         // selecting new files re-enables submit
         setUploadCompleted(false);
-        const arr = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.cdr')).slice(0, MAX_FILES);
-        const mapped = arr.map(file => ({ file, progress: 0, status: 'pending', uploadedCdr: null }));
+        const arr = Array.from(files).filter(file => file.name.toLowerCase().endsWith('.cdr'))
+            .slice(0, MAX_FILES);
+        const MAX_SIZE = 25 * 1024 * 1024; // 25MB
+        const mapped = arr.map(file => {
+            if (file.size > MAX_SIZE) {
+                setError(`File ${file.name} is larger than 25MB and was skipped`);
+                return null;
+            }
+            return ({ file, progress: 0, status: 'pending', uploadedCdr: null });
+        }).filter(Boolean);
         setSelectedFiles(prev => {
             const next = [...prev, ...mapped].slice(0, MAX_FILES);
             return next;
@@ -187,7 +197,7 @@ export default function PendingCDRPage() {
                         if (!saved) throw new Error('Upload failed');
                         const filename = saved.filename;
 
-                        // create graphic record pointing to filename
+                        // create graphic record pointing to filename (file-only upload)
                         const payload = { sales: modalSale._id, uploadCdr: filename };
                         const res = await axios.post('/api/graphic', payload);
 
@@ -355,7 +365,7 @@ export default function PendingCDRPage() {
 
                         <div className="p-4">
                             <div className="mb-4">
-                                <img src={modalSale.cardPhoto ? (typeof modalSale.cardPhoto === 'string' && !modalSale.cardPhoto.startsWith('data:') ? getImageUrl(modalSale.cardPhoto) : modalSale.cardPhoto) : ''} alt="card preview" className="w-82 h-44 object-fit rounded-lg" />
+                                <img src={modalSale.cardPhoto ? (typeof modalSale.cardPhoto === 'string' && !modalSale.cardPhoto.startsWith('data:') ? getImageUrl(modalSale.cardPhoto) : modalSale.cardPhoto) : ''} alt="card preview" className="w-full h-48 object-fit rounded-lg" />
                                 <p className="text-center mt-2 text-sm text-gray-600">Design Name : <strong>{modalSale.designName}</strong></p>
                             </div>
 
@@ -373,9 +383,9 @@ export default function PendingCDRPage() {
             {showCdrModal && modalSale ? (
                 <div onClick={closeCdrModal} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div onClick={(e) => e.stopPropagation()} className="bg-white w-[520px] max-w-full rounded-lg shadow-xl max-h-[80vh] overflow-auto">
-                        <div className="flex justify-between items-center px-4 mt-4">
-                            <h3 className="font-medium">CDR Management</h3>
-                            <button onClick={closeCdrModal} className="text-gray-600">✕</button>
+                        <div className="flex justify-between items-center mt-4 px-4">
+                            <h3 className="text-lg font-semibold">{modalSale?.orderStatus === 'notApproved' ? 'Re-upload CDR' : 'Upload CDR'}</h3>
+                            <button onClick={closeCdrModal} className="text-gray-600 font-bold">✕</button>
                         </div>
 
                         <div className="p-4">
@@ -385,18 +395,20 @@ export default function PendingCDRPage() {
                                 <div onDrop={(e) => { e.preventDefault(); onFilePicked(e.dataTransfer.files); }} onDragOver={(e) => e.preventDefault()} className="border rounded p-4">
                                     <div className="flex flex-col items-center gap-3">
                                         <div className="text-center w-full">
-                                            <h3 className="text-lg font-semibold">{modalSale?.orderStatus === 'notApproved' ? 'Re-upload CDR' : 'Upload CDR'}</h3>
-                                            <div className="my-4 text-gray-600 flex flex-col items-center">
+                                            <div className="my-2 text-gray-600 flex flex-col items-center">
                                                 <CloudUpload size={48} className="text-gray-400" />
-                                                <div className="mt-2 text-sm">Choose a CDR or drag & drop it here</div>
+                                                <div className="mt-2 text-sm">Choose  CDR OR Drive Link here</div>
                                             </div>
                                         </div>
 
                                         <div className="w-full">
                                             <div className="flex items-center gap-2">
-                                                <input id="cdr-file-input" type="file" multiple accept=".cdr" className="hidden" onChange={(e) => onFilePicked(e.target.files)} />
-                                                <label htmlFor="cdr-file-input" className="px-4 py-1 border rounded cursor-pointer bg-white">Browse File</label>
-                                                <div className="text-sm text-gray-600">{selectedFiles.length ? `${selectedFiles.length} file(s) selected` : 'no cdr selected'}</div>
+                                                <input id="cdr-file-input" type="file" multiple accept=".cdr" className="hidden" onChange={(e) => onFilePicked(e.target.files)} disabled={modalDriveLink.trim().length > 0} />
+                                                <label htmlFor="cdr-file-input" className={`px-4 py-1 border rounded cursor-pointer ${modalDriveLink.trim().length > 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white'}`}>Browse File</label>
+                                                <div className="flex-1 text-sm text-gray-600">{selectedFiles.length ? `${selectedFiles.length} file(s) selected` : 'no cdr selected'}</div>
+                                                <button disabled={!selectedFiles.length || uploading || uploadCompleted || modalDriveLink.trim().length > 0} onClick={startUpload} className={`px-3 py-1 rounded ${(!selectedFiles.length || uploading || uploadCompleted || modalDriveLink.trim().length > 0) ? 'bg-gray-300 text-gray-600' : 'bg-blue-600 text-white'}`}>
+                                                    {uploadCompleted ? 'Uploaded' : 'Upload Files'}
+                                                </button>
                                             </div>
 
                                             {/* selected files list */}
@@ -435,33 +447,31 @@ export default function PendingCDRPage() {
                                                 </div>
                                             ) : null}
 
-                                            <div className="mt-4">
-                                                <div className="flex items-center justify-center">
-                                                    <button disabled={!selectedFiles.length || uploading || uploadCompleted} onClick={startUpload} className={`px-6 py-2 rounded ${(!selectedFiles.length || uploading || uploadCompleted) ? 'bg-gray-300 text-gray-600' : 'bg-blue-600 text-white'}`}>
-                                                        {uploadCompleted ? 'Submitted' : 'Submit'}
-                                                    </button>
+                                            <div className="mt-3">
+                                                <label className="text-xs text-gray-600">Drive Link</label>
+                                                <div className="flex gap-2 mt-1">
+                                                    <input disabled={selectedFiles.length > 0} value={modalDriveLink} onChange={(e) => setModalDriveLink(e.target.value)} placeholder="Paste drive link here" className={`flex-1 px-3 py-2 border rounded text-sm ${selectedFiles.length > 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} />
+                                                    <button disabled={!modalDriveLink.trim() || uploading || selectedFiles.length > 0} onClick={async () => {
+                                                        if (!modalSale) return;
+                                                        try {
+                                                            setUploading(true);
+                                                            const payload = { sales: modalSale._id, driveLink: modalDriveLink };
+                                                            const res = await axios.post('/api/graphic', payload);
+                                                            setUploadedGraphics(prev => [...prev, res.data.data]);
+                                                            setModalGraphic(res.data.data);
+                                                            setModalDriveLink('');
+                                                            // refresh list
+                                                            try { const graphicRes = await axios.get('/api/graphic?type=pending'); setItems(graphicRes.data?.data || []); } catch (e) { }
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            setError(err?.response?.data?.message || err?.message || 'Submit link failed');
+                                                        } finally {
+                                                            setUploading(false);
+                                                        }
+                                                    }} className={`px-3 py-2 rounded text-white ${!modalDriveLink.trim() || uploading || selectedFiles.length > 0 ? 'bg-gray-300 text-gray-600' : 'bg-green-600'}`}>Submit Link</button>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
-                            ) : null}
-
-                            {/* Existing CDRs list */}
-                            {modalGraphic?.cdrs && modalGraphic.cdrs.length > 0 ? (
-                                <div className=" mt-3 mb-4 p-3 bg-gray-50 rounded border">
-                                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Previously Submitted CDRs:</h4>
-                                    <div className="flex flex-col gap-2">
-                                        {modalGraphic.cdrs.map((c, i) => (
-                                            <div key={c._id} className="flex items-center justify-between p-2 bg-white rounded border">
-                                                <div className="text-xs text-gray-700">{c.uploadCdr ? (typeof c.uploadCdr === 'string' ? c.uploadCdr.split('/').pop() : 'CDR') : `CDR ${i + 1}`}</div>
-                                                <button onClick={() => {
-                                                    const url = c.uploadCdr ? (typeof c.uploadCdr === 'string' && !c.uploadCdr.startsWith('http') && !c.uploadCdr.startsWith('data:') ? getImageUrl(c.uploadCdr) : c.uploadCdr) : null;
-                                                    const fname = c.uploadCdr && typeof c.uploadCdr === 'string' ? c.uploadCdr.split('/').pop() : 'CDR';
-                                                    downloadUrlAsFile(url, fname);
-                                                }} className="px-2 py-1 border rounded text-xs text-blue-600 bg-blue-50 hover:bg-blue-100">Download</button>
-                                            </div>
-                                        ))}
                                     </div>
                                 </div>
                             ) : null}
@@ -474,9 +484,9 @@ export default function PendingCDRPage() {
             {showAttachmentModal && attachmentModalSale ? (
                 <div onClick={closeAttachmentModal} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div onClick={(e) => e.stopPropagation()} className="bg-white w-[520px] max-w-full rounded-lg shadow-xl max-h-[80vh] overflow-auto">
-                        <div className="flex justify-between items-center p-4">
-                            <h3 className="font-medium">Attachment Details</h3>
-                            <button onClick={closeAttachmentModal} className="text-gray-600">✕</button>
+                        <div className="flex justify-between items-center px-4 py-2">
+                            <h3 className="font-medium font-bold">Attachment Details</h3>
+                            <button onClick={closeAttachmentModal} className="text-gray-600 font-bold">✕</button>
                         </div>
                         <div className="p-4">
                             {(() => {
@@ -489,13 +499,13 @@ export default function PendingCDRPage() {
                                         </div>
                                         {latestEmail?.attachments && latestEmail.attachments.length > 0 ? (
                                             <div>
-                                                <h4 className="font-semibold mb-2">Photos:</h4>
+                                                {/* <h4 className="font-semibold mb-2">Photos:</h4> */}
                                                 <div className="flex flex-wrap gap-2">
                                                     {latestEmail.attachments.map((att, idx) => {
                                                         const url = (typeof att === 'string' && !att.startsWith('http') && !att.startsWith('data:')) ? getImageUrl(att) : att;
                                                         const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(att);
                                                         if (isImage) {
-                                                            return <img key={idx} src={url} alt={`Attachment ${idx}`} className="w-24 h-24 object-cover rounded" />;
+                                                            return <img key={idx} src={url} alt={`Attachment ${idx}`} className="w-full h-48 object-cover rounded" />;
                                                         }
                                                         return null;
                                                     })}

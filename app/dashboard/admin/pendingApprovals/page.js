@@ -225,9 +225,6 @@ export default function ApprovalPendingPage() {
 
                 <div className="flex items-center gap-6">
                     <Search value={searchTerm} onChange={(v) => { setSearchTerm(v); setCurrentPage(1); }} className="px-3 py-1.5 rounded-lg text-sm outline-none ml-5" />
-                    <button className="text-white hover:text-gray-200 transition">
-                        <Download size={24} />
-                    </button>
                 </div>
             </div>
 

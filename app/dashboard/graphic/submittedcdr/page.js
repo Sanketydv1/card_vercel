@@ -26,6 +26,7 @@ export default function SubmittedCDRPage() {
     const [uploading, setUploading] = useState(false);
     const [uploadedBatches, setUploadedBatches] = useState([]); // groups of uploaded files per upload action
     const [uploadCompleted, setUploadCompleted] = useState(false);
+    const [modalDriveLink, setModalDriveLink] = useState('');
 
     const openEditModal = (g) => {
         setModalGraphic(g);
@@ -34,6 +35,7 @@ export default function SubmittedCDRPage() {
         setSelectedFiles([]);
         setEditingCdr(null);
         setUploadCompleted(false);
+        setModalDriveLink('');
         document.body.style.overflow = 'hidden';
     };
 
@@ -52,6 +54,7 @@ export default function SubmittedCDRPage() {
         setSelectedFiles([]);
         setEditingCdr(null);
         setUploadCompleted(false);
+        setModalDriveLink('');
         document.body.style.overflow = '';
     };
 
@@ -312,14 +315,14 @@ export default function SubmittedCDRPage() {
                 <div onClick={closeModal} className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div onClick={(e) => e.stopPropagation()} className="bg-white w-[520px] max-w-full rounded-lg shadow-xl max-h-[80vh] overflow-auto">
                         <div className="flex justify-between items-center px-4 mt-3">
-                            <h3 className="font-medium">Submitted CDR</h3>
-                            <button onClick={closeModal} className="text-gray-600">✕</button>
+                            <h3 className="text-lg font-semibold">Uploaded CDR</h3>
+                            <button onClick={closeModal} className="text-gray-600 font-bold">✕</button>
                         </div>
 
                         <div className="p-4">
                             {!isEditing && (
                                 <div className="mb-4">
-                                    <img src={modalGraphic.cardPhoto ? (typeof modalGraphic.cardPhoto === 'string' && !modalGraphic.cardPhoto.startsWith('data:') ? getImageUrl(modalGraphic.cardPhoto) : modalGraphic.cardPhoto) : ''} alt="card preview" className="w-82 h-44 object-fit rounded-lg" />
+                                    <img src={modalGraphic.cardPhoto ? (typeof modalGraphic.cardPhoto === 'string' && !modalGraphic.cardPhoto.startsWith('data:') ? getImageUrl(modalGraphic.cardPhoto) : modalGraphic.cardPhoto) : ''} alt="card preview" className="w-full h-48 object-fit rounded-lg" />
                                     <p className="text-center mt-2 text-sm text-gray-600">Design Name : <strong>{modalGraphic.designName}</strong></p>
                                 </div>
                             )}
@@ -361,7 +364,6 @@ export default function SubmittedCDRPage() {
                                                 <div onDrop={(e) => { e.preventDefault(); onFilePicked(e.dataTransfer.files); }} onDragOver={(e) => e.preventDefault()} className="border rounded p-4 mt-3">
                                                     <div className="flex flex-col items-center gap-3">
                                                         <div className="text-center w-full">
-                                                            <h3 className="text-lg font-semibold">Upload CDR</h3>
                                                             <div className="my-4 text-gray-600 flex flex-col items-center">
                                                                 <CloudUpload size={48} className="text-gray-400" />
                                                                 <div className="mt-2 text-sm">Choose a file or drag & drop it here</div>
@@ -370,9 +372,12 @@ export default function SubmittedCDRPage() {
 
                                                         <div className="w-full">
                                                             <div className="flex items-center gap-2">
-                                                                <input id="add-cdr-file" type="file" multiple className="hidden" onChange={(e) => onFilePicked(e.target.files)} />
-                                                                <label htmlFor="add-cdr-file" className="px-4 py-1 border rounded cursor-pointer bg-white">Browse File</label>
+                                                                <input id="add-cdr-file" type="file" multiple className="hidden" onChange={(e) => onFilePicked(e.target.files)} disabled={modalDriveLink.trim().length > 0} />
+                                                                <label htmlFor="add-cdr-file" className={`px-4 py-1 border rounded cursor-pointer ${modalDriveLink.trim().length > 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white'}`}>Browse File</label>
                                                                 <div className="flex-1 text-sm text-gray-600">{selectedFiles.length ? `${selectedFiles.length} file(s) selected` : 'no file selected'}</div>
+                                                                <button disabled={!selectedFiles.length || uploading || uploadCompleted || modalDriveLink.trim().length > 0} onClick={startUpload} className={`px-3 py-1 rounded ${(!selectedFiles.length || uploading || uploadCompleted || modalDriveLink.trim().length > 0) ? 'bg-gray-300 text-gray-600' : 'bg-blue-600 text-white'}`}>
+                                                                    {uploadCompleted ? 'Uploaded' : 'Upload Files'}
+                                                                </button>
                                                             </div>
 
                                                             <div className="mt-3 flex flex-col gap-2">
@@ -410,16 +415,27 @@ export default function SubmittedCDRPage() {
                                                                 </div>
                                                             ) : null}
 
-                                                            <div className="mt-4">
-                                                                <div className="flex items-center justify-center gap-3">
-                                                                    <button disabled={!selectedFiles.length || uploading || uploadCompleted} onClick={startUpload} className={`px-6 py-2 rounded ${(!selectedFiles.length || uploading || uploadCompleted) ? 'bg-gray-300 text-gray-600' : 'bg-blue-600 text-white'}`}>
-                                                                        {uploadCompleted ? 'Submitted' : 'Submit'}
-                                                                    </button>
-                                                                    {editingCdr ? (
-                                                                        <button disabled={!selectedFiles.length || uploading || uploadCompleted} onClick={startUpload} className={`px-4 py-2 rounded ${(!selectedFiles.length || uploading || uploadCompleted) ? 'bg-gray-300 text-gray-600' : 'bg-green-600 text-white'}`}>
-                                                                            {uploadCompleted ? 'Submitted' : 'Save Changes'}
-                                                                        </button>
-                                                                    ) : null}
+                                                            <div className="mt-3">
+                                                                <label className="text-xs text-gray-600">Drive Link</label>
+                                                                <div className="flex gap-2 mt-1">
+                                                                    <input disabled={selectedFiles.length > 0} value={modalDriveLink} onChange={(e) => setModalDriveLink(e.target.value)} placeholder="Paste drive link here" className={`flex-1 px-3 py-2 border rounded text-sm ${selectedFiles.length > 0 ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`} />
+                                                                    <button disabled={!modalDriveLink.trim() || uploading || selectedFiles.length > 0} onClick={async () => {
+                                                                        if (!modalGraphic) return;
+                                                                        try {
+                                                                            setUploading(true);
+                                                                            const payload = { sales: modalGraphic?._id, driveLink: modalDriveLink };
+                                                                            const res = await axios.post('/api/graphic', payload);
+                                                                            setModalGraphic(res.data.data);
+                                                                            setModalDriveLink('');
+                                                                            // refresh list
+                                                                            try { const graphicRes = await axios.get('/api/graphic?type=submitted'); setItems(graphicRes.data?.data || []); } catch (e) { }
+                                                                        } catch (err) {
+                                                                            console.error(err);
+                                                                            setError(err?.response?.data?.message || err?.message || 'Submit link failed');
+                                                                        } finally {
+                                                                            setUploading(false);
+                                                                        }
+                                                                    }} className={`px-3 py-2 rounded text-white ${!modalDriveLink.trim() || uploading || selectedFiles.length > 0 ? 'bg-gray-300 text-gray-600' : 'bg-green-600'}`}>Submit Link</button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -445,17 +461,29 @@ export default function SubmittedCDRPage() {
                                                     </div>
                                                 )}
 
-                                                <div className="flex flex-col gap-1 mb-3 mt-4">
+                                                <div className="flex flex-col gap-2 mb-3 mt-4">
                                                     {(modalGraphic.graphic?.cdrs || []).map((c, i) => (
-                                                        <div key={c._id} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                                            <div className="text-xs text-gray-700">{c.uploadCdr ? (typeof c.uploadCdr === 'string' ? c.uploadCdr.split('/').pop() : `CDR ${i + 1}`) : `CDR ${i + 1}`}</div>
-                                                            <div className="flex items-center gap-2">
-                                                                {c.uploadCdr ? (
-                                                                    <a href={typeof c.uploadCdr === 'string' && !c.uploadCdr.startsWith('http') && !c.uploadCdr.startsWith('data:') ? getImageUrl(c.uploadCdr) : c.uploadCdr} download className="px-2 py-0 border rounded text-sm text-blue-600 bg-white">Download</a>
-                                                                ) : (
-                                                                    <span className="text-sm text-gray-500">—</span>
-                                                                )}
-                                                            </div>
+                                                        <div key={c._id} className="flex flex-col gap-1 p-2 bg-gray-50 rounded border">
+                                                            {/* File upload row */}
+                                                            {c.uploadCdr && (
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="text-xs text-gray-700">File: {typeof c.uploadCdr === 'string' ? c.uploadCdr.split('/').pop() : `CDR ${i + 1}`}</div>
+                                                                    <a href={typeof c.uploadCdr === 'string' && !c.uploadCdr.startsWith('http') && !c.uploadCdr.startsWith('data:') ? getImageUrl(c.uploadCdr) : c.uploadCdr} download className="px-2 py-0 border rounded text-xs text-blue-600 bg-white hover:bg-blue-50">Download</a>
+                                                                </div>
+                                                            )}
+                                                            {/* Drive link row */}
+                                                            {c.driveLink && (
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="text-xs text-gray-700">Link: {c.driveLink.substring(0, 30)}...</div>
+                                                                    <div className="flex gap-1">
+                                                                        <button onClick={() => window.open(c.driveLink, '_blank')} className="px-2 py-0 border rounded text-xs text-green-600 bg-white hover:bg-green-50">Open</button>
+                                                                        <button onClick={() => { navigator.clipboard.writeText(c.driveLink); alert('Link copied'); }} className="px-2 py-0 border rounded text-xs text-green-600 bg-white hover:bg-green-50">Copy</button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {!c.uploadCdr && !c.driveLink && (
+                                                                <div className="text-xs text-gray-500">No file or link</div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
